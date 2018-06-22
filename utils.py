@@ -1,49 +1,12 @@
 import multiprocessing
 
 import cv2 as cv
-import keras.backend as K
 import numpy as np
 from tensorflow.python.client import device_lib
 
-from config import epsilon, epsilon_sqr
 from config import img_cols
 from config import img_rows
 from config import unknown_code
-
-
-# overall loss: weighted summation of the two individual losses.
-#
-def overall_loss(y_true, y_pred):
-    w_l = 0.5
-    return w_l * alpha_prediction_loss(y_true, y_pred) + (1 - w_l) * compositional_loss(y_true, y_pred)
-
-
-# alpha prediction loss: the abosolute difference between the ground truth alpha values and the
-# predicted alpha values at each pixel. However, due to the non-differentiable property of
-# absolute values, we use the following loss function to approximate it.
-def alpha_prediction_loss(y_true, y_pred):
-    mask = y_true[:, :, :, 1]
-    diff = y_pred[:, :, :, 0] - y_true[:, :, :, 0]
-    diff = diff * mask
-    num_pixels = K.sum(mask)
-    return K.sum(K.sqrt(K.square(diff) + epsilon_sqr)) / (num_pixels + epsilon)
-
-
-# compositional loss: the aboslute difference between the ground truth RGB colors and the predicted
-# RGB colors composited by the ground truth foreground, the ground truth background and the predicted
-# alpha mattes.
-def compositional_loss(y_true, y_pred):
-    mask = y_true[:, :, :, 1]
-    mask = K.reshape(mask, (-1, img_rows, img_cols, 1))
-    image = y_true[:, :, :, 2:5]
-    fg = y_true[:, :, :, 5:8]
-    bg = y_true[:, :, :, 8:11]
-    c_g = image
-    c_p = y_pred * fg + (1.0 - y_pred) * bg
-    diff = c_p - c_g
-    diff = diff * mask
-    num_pixels = K.sum(mask)
-    return K.sum(K.sqrt(K.square(diff) + epsilon_sqr)) / (num_pixels + epsilon)
 
 
 # compute the MSE error given a prediction, a ground truth and a trimap.
@@ -107,4 +70,3 @@ def draw_str(dst, target, s):
     x, y = target
     cv.putText(dst, s, (x + 1, y + 1), cv.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0), thickness=2, lineType=cv.LINE_AA)
     cv.putText(dst, s, (x, y), cv.FONT_HERSHEY_PLAIN, 1.0, (255, 255, 255), lineType=cv.LINE_AA)
-

@@ -75,5 +75,5 @@ def build_model():
 if __name__ == '__main__':
     m = build_model()
     print(m.summary())
-    plot_model(m, to_file='encoder_decoder.svg', show_layer_names=True, show_shapes=True)
+    plot_model(m, to_file='model.svg', show_layer_names=True, show_shapes=True)
     K.clear_session()

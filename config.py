@@ -1,5 +1,4 @@
 img_rows, img_cols = 256, 256
-# img_rows_half, img_cols_half = 160, 160
 channel = 4
 batch_size = 8
 epochs = 1000
@@ -9,8 +8,6 @@ num_train_samples = 34480
 # num_samples - num_train_samples
 num_valid_samples = 8620
 unknown_code = 128
-epsilon = 1e-6
-epsilon_sqr = epsilon ** 2
 
 ##############################################################
 # Set your paths here

@@ -1,18 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from keras.optimizers import SGD
+import sys
+
+from keras import backend as K
 from keras.layers import Input, Dense, Conv2D, MaxPooling2D, AveragePooling2D, ZeroPadding2D, Flatten, merge, Activation
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
-from keras import backend as K
-
-from sklearn.metrics import log_loss
+from keras.optimizers import SGD
 
 from custom_layers.scale_layer import Scale
-
-from load_cifar10 import load_cifar10_data
-
-import sys
 
 sys.setrecursionlimit(3000)
 
@@ -176,34 +172,3 @@ def resnet101_model(img_rows, img_cols, color_type=1, num_classes=None):
     model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
 
     return model
-
-
-if __name__ == '__main__':
-    # Example to fine-tune on 3000 samples from Cifar10
-
-    img_rows, img_cols = 224, 224  # Resolution of inputs
-    channel = 3
-    num_classes = 10
-    batch_size = 16
-    epochs = 10
-
-    # Load Cifar10 data. Please implement your own load_data() module for your own dataset
-    X_train, Y_train, X_valid, Y_valid = load_cifar10_data(img_rows, img_cols)
-
-    # Load our model
-    model = resnet101_model(img_rows, img_cols, channel, num_classes)
-
-    # Start Fine-tuning
-    model.fit(X_train, Y_train,
-              batch_size=batch_size,
-              epochs=epochs,
-              shuffle=True,
-              verbose=1,
-              validation_data=(X_valid, Y_valid),
-              )
-
-    # Make predictions
-    predictions_valid = model.predict(X_valid, batch_size=batch_size, verbose=1)
-
-    # Cross-entropy loss score
-    score = log_loss(Y_valid, predictions_valid)

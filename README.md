@@ -1,1 +1,63 @@
 # Deep-Residual-Matting
+
+This repository is to implement Deep Image Matting with ResNet.
+
+## Dependencies
+- [NumPy](http://docs.scipy.org/doc/numpy-1.10.1/user/install.html)
+- [Tensorflow](https://www.tensorflow.org/versions/r0.8/get_started/os_setup.html)
+- [Keras](https://keras.io/#installation)
+- [OpenCV](https://opencv-python-tutroals.readthedocs.io/en/latest/)
+
+## Dataset
+### Adobe Deep Image Matting Dataset
+Follow the [instruction](https://sites.google.com/view/deepimagematting) to contact author for the dataset.
+
+### MSCOCO
+Go to [MSCOCO](http://cocodataset.org/#download) to download:
+* [2014 Train images](http://images.cocodataset.org/zips/train2014.zip)
+
+
+### PASCAL VOC
+Go to [PASCAL VOC](http://host.robots.ox.ac.uk/pascal/VOC/) to download:
+* VOC challenge 2007 [training/validation data](http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtrainval_06-Nov-2007.tar)
+
+## ImageNet Pretrained Models
+Download [VGG16](https://github.com/fchollet/deep-learning-models/releases/download/v0.1/vgg16_weights_tf_dim_ordering_tf_kernels.h5) into models folder.
+
+
+## Usage
+### Data Pre-processing
+Extract training images:
+```bash
+$ python pre-process.py
+```
+
+### Train
+```bash
+$ python train.py
+```
+
+If you want to visualize during training, run in your terminal:
+```bash
+$ tensorboard --logdir path_to_current_dir/logs
+```
+
+### Demo
+
+```bash
+$ python demo.py
+```
+
+Image | Trimap | Output | GT |
+|---|---|---|---|
+|![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/0_image.png)  | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/0_trimap.png) | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/0_out.png)| ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/0_alpha.png)|
+|![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/1_image.png)  | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/1_trimap.png) | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/1_out.png)| ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/1_alpha.png)|
+|![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/2_image.png)  | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/2_trimap.png) | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/2_out.png)| ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/2_alpha.png)|
+|![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/3_image.png)  | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/3_trimap.png) | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/3_out.png)| ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/3_alpha.png)|
+|![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/4_image.png)  | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/4_trimap.png) | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/4_out.png)| ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/4_alpha.png)|
+|![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/5_image.png)  | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/5_trimap.png) | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/5_out.png)| ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/5_alpha.png)|
+|![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/6_image.png)  | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/6_trimap.png) | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/6_out.png)| ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/6_alpha.png)|
+|![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/7_image.png)  | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/7_trimap.png) | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/7_out.png)| ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/7_alpha.png)|
+|![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/8_image.png)  | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/8_trimap.png) | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/8_out.png)| ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/8_alpha.png)|
+|![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/9_image.png)  | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/9_trimap.png) | ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/9_out.png)| ![image](https://github.com/foamliu/Deep-Image-Matting/raw/master/images/9_alpha.png)|
+
