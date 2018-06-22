@@ -4,7 +4,7 @@ from keras import backend as K
 from keras.layers import Input, Dense, Conv2D, MaxPooling2D, AveragePooling2D, ZeroPadding2D, Flatten, Activation, add
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
-from keras.optimizers import SGD
+from keras.utils import plot_model
 
 
 def identity_block(input_tensor, kernel_size, filters, stage, block):
@@ -140,25 +140,25 @@ def resnet50_model(img_rows, img_cols, color_type=1, num_classes=None):
     # Load ImageNet pre-trained data 
     if K.image_dim_ordering() == 'th':
         # Use pre-trained weights for Theano backend
-        weights_path = 'imagenet_models/resnet50_weights_th_dim_ordering_th_kernels.h5'
+        weights_path = 'models/resnet50_weights_th_dim_ordering_th_kernels.h5'
     else:
         # Use pre-trained weights for Tensorflow backend
-        weights_path = 'imagenet_models/resnet50_weights_tf_dim_ordering_tf_kernels.h5'
+        weights_path = 'models/resnet50_weights_tf_dim_ordering_tf_kernels.h5'
 
     model.load_weights(weights_path)
 
     # Truncate and replace softmax layer for transfer learning
     # Cannot use model.layers.pop() since model is not of Sequential() type
     # The method below works since pre-trained weights are stored in layers but not in the model
-    x_newfc = AveragePooling2D((7, 7), name='avg_pool')(x)
-    x_newfc = Flatten()(x_newfc)
-    x_newfc = Dense(num_classes, activation='softmax', name='fc10')(x_newfc)
+    x_newfc = Conv2D(1, (1, 1), activation='sigmoid', padding='same', name='pred')(x)
 
     # Create another model with our customized softmax
     model = Model(img_input, x_newfc)
-
-    # Learning rate is changed to 0.001
-    sgd = SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
-
     return model
+
+
+if __name__ == '__main__':
+    m = resnet50_model()
+    print(m.summary())
+    plot_model(m, to_file='resnet50.svg', show_layer_names=True, show_shapes=True)
+    K.clear_session()

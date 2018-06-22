@@ -7,10 +7,9 @@ import cv2 as cv
 import numpy as np
 from keras.utils import Sequence
 
-from config import batch_size
+from config import batch_size, img_cols, img_rows
 from config import fg_path, bg_path, a_path
-from config import img_cols, img_rows
-from config import unknown_code
+from config import unknown_code, num_valid_samples
 from utils import safe_crop
 
 kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 3))
@@ -170,7 +169,7 @@ def shuffle_data():
     num_fgs = 431
     num_bgs = 43100
     num_bgs_per_fg = 100
-    num_valid_samples = 8620
+
     names = []
     bcount = 0
     for fcount in range(num_fgs):
@@ -178,8 +177,7 @@ def shuffle_data():
             names.append(str(fcount) + '_' + str(bcount) + '.png')
             bcount += 1
 
-    from config import num_valid_samples
-    valid_names = np.random.sample(names, num_valid_samples)
+    valid_names = random.sample(names, num_valid_samples)
     train_names = [n for n in names if n not in valid_names]
     shuffle(valid_names)
     shuffle(train_names)
