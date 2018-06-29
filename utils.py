@@ -1,12 +1,22 @@
 import multiprocessing
-
+import keras.backend as K
 import cv2 as cv
 import numpy as np
 from tensorflow.python.client import device_lib
 
-from config import img_cols
-from config import img_rows
-from config import unknown_code
+from config import img_cols, img_rows, unknown_code
+from config import epsilon_sqr, epsilon
+
+
+# alpha prediction loss: the abosolute difference between the ground truth alpha values and the
+# predicted alpha values at each pixel. However, due to the non-differentiable property of
+# absolute values, we use the following loss function to approximate it.
+def alpha_prediction_loss(y_true, y_pred):
+    mask = y_true[:, :, :, 1]
+    diff = y_pred[:, :, :, 0] - y_true[:, :, :, 0]
+    diff = diff * mask
+    num_pixels = K.sum(mask)
+    return K.sum(K.sqrt(K.square(diff) + epsilon_sqr)) / (num_pixels + epsilon)
 
 
 # compute the MSE error given a prediction, a ground truth and a trimap.
