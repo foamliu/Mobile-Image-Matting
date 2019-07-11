@@ -1,81 +1,176 @@
-import argparse
+import numpy as np
+import torch
+from tensorboardX import SummaryWriter
+from torch import nn
 
-import keras
-import tensorflow as tf
-from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
-from keras.utils import multi_gpu_model
-from utils import alpha_prediction_loss
-from config import patience, batch_size, epochs, num_train_samples, num_valid_samples
-from data_generator import train_gen, valid_gen
-from model import build_model
-from utils import get_available_cpus, get_available_gpus
+from config import device, im_size, grad_clip, print_freq
+from data_gen import DIMDataset
+from models import DIMModel
+from utils import parse_args, save_checkpoint, AverageMeter, clip_gradient, get_logger, get_learning_rate, \
+    alpha_prediction_loss, adjust_learning_rate
+
+
+def train_net(args):
+    torch.manual_seed(7)
+    np.random.seed(7)
+    checkpoint = args.checkpoint
+    start_epoch = 0
+    best_loss = float('inf')
+    writer = SummaryWriter()
+    epochs_since_improvement = 0
+
+    # Initialize / load checkpoint
+    if checkpoint is None:
+        model = DIMModel(n_classes=1, in_channels=4, is_unpooling=True, pretrain=True)
+        model = nn.DataParallel(model)
+
+        if args.optimizer == 'sgd':
+            optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.mom,
+                                        weight_decay=args.weight_decay)
+        else:
+            optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+
+    else:
+        checkpoint = torch.load(checkpoint)
+        start_epoch = checkpoint['epoch'] + 1
+        epochs_since_improvement = checkpoint['epochs_since_improvement']
+        model = checkpoint['model']
+        optimizer = checkpoint['optimizer']
+
+    logger = get_logger()
+
+    # Move to GPU, if available
+    model = model.to(device)
+
+    # Custom dataloaders
+    train_dataset = DIMDataset('train')
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
+    valid_dataset = DIMDataset('valid')
+    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8)
+
+    # Epochs
+    for epoch in range(start_epoch, args.end_epoch):
+        if epochs_since_improvement == 10:
+            break
+
+        if epochs_since_improvement > 0 and epochs_since_improvement % 2 == 0:
+            checkpoint = 'BEST_checkpoint.tar'
+            checkpoint = torch.load(checkpoint)
+            model = checkpoint['model']
+            optimizer = checkpoint['optimizer']
+
+            adjust_learning_rate(optimizer, 0.6)
+
+        # One epoch's training
+        train_loss = train(train_loader=train_loader,
+                           model=model,
+                           optimizer=optimizer,
+                           epoch=epoch,
+                           logger=logger)
+        effective_lr = get_learning_rate(optimizer)
+        print('Current effective learning rate: {}\n'.format(effective_lr))
+
+        writer.add_scalar('Train_Loss', train_loss, epoch)
+
+        # One epoch's validation
+        valid_loss = valid(valid_loader=valid_loader,
+                           model=model,
+                           logger=logger)
+
+        writer.add_scalar('Valid_Loss', valid_loss, epoch)
+
+        # Check if there was an improvement
+        is_best = valid_loss < best_loss
+        best_loss = min(valid_loss, best_loss)
+        if not is_best:
+            epochs_since_improvement += 1
+            print("\nEpochs since last improvement: %d\n" % (epochs_since_improvement,))
+        else:
+            epochs_since_improvement = 0
+
+        # Save checkpoint
+        save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss, is_best)
+
+
+def train(train_loader, model, optimizer, epoch, logger):
+    model.train()  # train mode (dropout and batchnorm is used)
+
+    losses = AverageMeter()
+
+    # Batches
+    for i, (img, alpha_label) in enumerate(train_loader):
+        # Move to GPU, if available
+        img = img.type(torch.FloatTensor).to(device)  # [N, 4, 320, 320]
+        alpha_label = alpha_label.type(torch.FloatTensor).to(device)  # [N, 320, 320]
+        alpha_label = alpha_label.reshape((-1, 2, im_size * im_size))  # [N, 320*320]
+
+        # Forward prop.
+        alpha_out = model(img)  # [N, 3, 320, 320]
+        alpha_out = alpha_out.reshape((-1, 1, im_size * im_size))  # [N, 320*320]
+
+        # Calculate loss
+        # loss = criterion(alpha_out, alpha_label)
+        loss = alpha_prediction_loss(alpha_out, alpha_label)
+
+        # Back prop.
+        optimizer.zero_grad()
+        loss.backward()
+
+        # Clip gradients
+        clip_gradient(optimizer, grad_clip)
+
+        # Update weights
+        optimizer.step()
+
+        # Keep track of metrics
+        losses.update(loss.item())
+
+        # Print status
+
+        if i % print_freq == 0:
+            status = 'Epoch: [{0}][{1}/{2}]\t' \
+                     'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(epoch, i, len(train_loader), loss=losses)
+            logger.info(status)
+
+    return losses.avg
+
+
+def valid(valid_loader, model, logger):
+    model.eval()  # eval mode (dropout and batchnorm is NOT used)
+
+    losses = AverageMeter()
+
+    # Batches
+    for img, alpha_label in valid_loader:
+        # Move to GPU, if available
+        img = img.type(torch.FloatTensor).to(device)  # [N, 3, 320, 320]
+        alpha_label = alpha_label.type(torch.FloatTensor).to(device)  # [N, 320, 320]
+        alpha_label = alpha_label.reshape((-1, 2, im_size * im_size))  # [N, 320*320]
+
+        # Forward prop.
+        alpha_out = model(img)  # [N, 320, 320]
+        alpha_out = alpha_out.reshape((-1, 1, im_size * im_size))  # [N, 320*320]
+
+        # Calculate loss
+        # loss = criterion(alpha_out, alpha_label)
+        loss = alpha_prediction_loss(alpha_out, alpha_label)
+
+        # Keep track of metrics
+        losses.update(loss.item())
+
+    # Print status
+    status = 'Validation: Loss {loss.avg:.4f}\n'.format(loss=losses)
+
+    logger.info(status)
+
+    return losses.avg
+
+
+def main():
+    global args
+    args = parse_args()
+    train_net(args)
+
 
 if __name__ == '__main__':
-    checkpoint_models_path = 'models/'
-    # Parse arguments
-    ap = argparse.ArgumentParser()
-    ap.add_argument("-p", "--pretrained", help="path to save pretrained model files")
-    args = vars(ap.parse_args())
-    pretrained_path = args["pretrained"]
-
-    # Callbacks
-    tensor_board = keras.callbacks.TensorBoard(log_dir='./logs', histogram_freq=0, write_graph=True, write_images=True)
-    model_names = checkpoint_models_path + 'final.{epoch:02d}-{val_loss:.4f}.hdf5'
-    model_checkpoint = ModelCheckpoint(model_names, monitor='val_loss', verbose=1, save_best_only=True)
-    early_stop = EarlyStopping('val_loss', patience=patience)
-    reduce_lr = ReduceLROnPlateau('val_loss', factor=0.1, patience=int(patience / 4), verbose=1)
-
-
-    class MyCbk(keras.callbacks.Callback):
-        def __init__(self, model):
-            keras.callbacks.Callback.__init__(self)
-            self.model_to_save = model
-
-        def on_epoch_end(self, epoch, logs=None):
-            fmt = checkpoint_models_path + 'model.%02d-%.4f.hdf5'
-            self.model_to_save.save(fmt % (epoch, logs['val_loss']))
-
-
-    num_gpu = len(get_available_gpus())
-    if num_gpu >= 2:
-        with tf.device("/cpu:0"):
-            # Load our model, added support for Multi-GPUs
-            model = build_model()
-            if pretrained_path is not None:
-                model.load_weights(pretrained_path)
-
-        new_model = multi_gpu_model(model, gpus=num_gpu)
-        # rewrite the callback: saving through the original model and not the multi-gpu model.
-        model_checkpoint = MyCbk(model)
-    else:
-        new_model = build_model()
-        if pretrained_path is not None:
-            new_model.load_weights(pretrained_path)
-
-    # finetune the whole network together.
-    for layer in new_model.layers:
-        layer.trainable = True
-
-    sgd = keras.optimizers.SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
-    new_model.compile(optimizer=sgd, loss=alpha_prediction_loss)
-
-    print(new_model.summary())
-
-    # Summarize then go!
-    num_cpu = get_available_cpus()
-    workers = int(round(num_cpu / 2))
-
-    # Final callbacks
-    callbacks = [tensor_board, model_checkpoint, early_stop, reduce_lr]
-
-    # Start Fine-tuning
-    new_model.fit_generator(train_gen(),
-                            steps_per_epoch=num_train_samples // batch_size,
-                            validation_data=valid_gen(),
-                            validation_steps=num_valid_samples // batch_size,
-                            epochs=epochs,
-                            verbose=1,
-                            callbacks=callbacks,
-                            use_multiprocessing=True,
-                            workers=workers
-                            )
+    main()

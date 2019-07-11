@@ -5,8 +5,8 @@ import cv2 as cv
 import keras.backend as K
 import numpy as np
 
-from data_generator import generate_trimap, random_choice, get_alpha_test
-from model import build_encoder_decoder, build_refinement
+from data_gen import generate_trimap, random_choice, get_alpha_test
+from models import build_encoder_decoder, build_refinement
 from utils import get_final_output, safe_crop, draw_str
 from utils import compute_mse_loss, compute_sad_loss
 
