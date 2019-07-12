@@ -1,32 +1,44 @@
 import math
 import os
 import random
-from random import shuffle
 
 import cv2 as cv
 import numpy as np
-from keras.utils import Sequence
+import torch
+from torch.utils.data import Dataset
+from torchvision import transforms
 
-from config import batch_size, img_cols, img_rows
-from config import fg_path, bg_path, a_path
-from config import unknown_code, num_valid_samples
+from config import im_size, unknown_code, fg_path, bg_path, a_path, num_valid
 from utils import safe_crop
 
+# Data augmentation and normalization for training
+# Just normalization for validation
+data_transforms = {
+    'train': transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+    ]),
+    'valid': transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ]),
+}
+
 kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 3))
-with open('Combined_Dataset/Training_set/training_fg_names.txt') as f:
+with open('data/Combined_Dataset/Training_set/training_fg_names.txt') as f:
     fg_files = f.read().splitlines()
-with open('Combined_Dataset/Test_set/test_fg_names.txt') as f:
-    fg_test_files = f.read().splitlines()
-with open('Combined_Dataset/Training_set/training_bg_names.txt') as f:
+with open('data/Combined_Dataset/Training_set/training_bg_names.txt') as f:
     bg_files = f.read().splitlines()
-with open('Combined_Dataset/Test_set/test_bg_names.txt') as f:
+with open('data/Combined_Dataset/Test_set/test_fg_names.txt') as f:
+    fg_test_files = f.read().splitlines()
+with open('data/Combined_Dataset/Test_set/test_bg_names.txt') as f:
     bg_test_files = f.read().splitlines()
 
 
 def get_alpha(name):
     fg_i = int(name.split("_")[0])
     name = fg_files[fg_i]
-    filename = os.path.join('mask', name)
+    filename = os.path.join('data/mask', name)
     alpha = cv.imread(filename, 0)
     return alpha
 
@@ -34,7 +46,7 @@ def get_alpha(name):
 def get_alpha_test(name):
     fg_i = int(name.split("_")[0])
     name = fg_test_files[fg_i]
-    filename = os.path.join('mask_test', name)
+    filename = os.path.join('data/mask_test', name)
     alpha = cv.imread(filename, 0)
     return alpha
 
@@ -71,13 +83,27 @@ def process(im_name, bg_name):
     return composite4(im, bg, a, w, h)
 
 
-def generate_trimap(alpha):
-    fg = np.array(np.equal(alpha, 255).astype(np.float32))
-    # fg = cv.erode(fg, kernel, iterations=np.random.randint(1, 3))
-    unknown = np.array(np.not_equal(alpha, 0).astype(np.float32))
-    unknown = cv.dilate(unknown, kernel, iterations=np.random.randint(1, 20))
-    trimap = fg * 255 + (unknown - fg) * 128
-    return trimap.astype(np.uint8)
+# def gen_trimap(alpha):
+#     fg = np.array(np.equal(alpha, 255).astype(np.float32))
+#     # fg = cv.erode(fg, kernel, iterations=np.random.randint(1, 3))
+#     unknown = np.array(np.not_equal(alpha, 0).astype(np.float32))
+#     unknown = cv.dilate(unknown, kernel, iterations=np.random.randint(1, 20))
+#     trimap = fg * 255 + (unknown - fg) * 128
+#     trimap = np.clip(trimap, 0, 255.0)
+#     return trimap.astype(np.uint8)
+
+
+def gen_trimap(alpha):
+    k_size = random.choice(range(1, 5))
+    iterations = np.random.randint(1, 20)
+    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (k_size, k_size))
+    dilated = cv.dilate(alpha, kernel, iterations)
+    eroded = cv.erode(alpha, kernel, iterations)
+    trimap = np.zeros(alpha.shape)
+    trimap.fill(128)
+    trimap[eroded >= 255] = 255
+    trimap[dilated <= 0] = 0
+    return trimap
 
 
 # Randomly crop (image, trimap) pairs centered on pixels in the unknown regions.
@@ -95,77 +121,59 @@ def random_choice(trimap, crop_size=(320, 320)):
     return x, y
 
 
-class DataGenSequence(Sequence):
-    def __init__(self, usage):
-        self.usage = usage
+class DIMDataset(Dataset):
+    def __init__(self, split):
+        self.split = split
 
-        filename = '{}_names.txt'.format(usage)
-        with open(filename, 'r') as f:
-            self.names = f.read().splitlines()
+        filename = '{}_names.txt'.format(split)
+        with open(filename, 'r') as file:
+            self.names = file.read().splitlines()
 
-        np.random.shuffle(self.names)
+        self.transformer = data_transforms[split]
+
+    def __getitem__(self, i):
+        name = self.names[i]
+        fcount = int(name.split('.')[0].split('_')[0])
+        bcount = int(name.split('.')[0].split('_')[1])
+        im_name = fg_files[fcount]
+        bg_name = bg_files[bcount]
+        img, alpha, fg, bg = process(im_name, bg_name)
+
+        # crop size 320:640:480 = 1:1:1
+        different_sizes = [(320, 320), (480, 480), (640, 640)]
+        crop_size = random.choice(different_sizes)
+
+        trimap = gen_trimap(alpha)
+        x, y = random_choice(trimap, crop_size)
+        img = safe_crop(img, x, y, crop_size)
+        alpha = safe_crop(alpha, x, y, crop_size)
+
+        trimap = gen_trimap(alpha)
+
+        # Flip array left to right randomly (prob=1:1)
+        if np.random.random_sample() > 0.5:
+            img = np.fliplr(img)
+            trimap = np.fliplr(trimap)
+            alpha = np.fliplr(alpha)
+
+        x = torch.zeros((4, im_size, im_size), dtype=torch.float)
+        img = transforms.ToPILImage()(img)
+        img = self.transformer(img)
+        x[0:3, :, :] = img
+        x[3, :, :] = torch.from_numpy(trimap.copy()) / 255.
+
+        y = np.empty((2, im_size, im_size), dtype=np.float32)
+        y[0, :, :] = alpha / 255.
+        mask = np.equal(trimap, 128).astype(np.float32)
+        y[1, :, :] = mask
+
+        return x, y
 
     def __len__(self):
-        return int(np.ceil(len(self.names) / float(batch_size)))
-
-    def __getitem__(self, idx):
-        i = idx * batch_size
-
-        length = min(batch_size, (len(self.names) - i))
-        batch_x = np.empty((length, img_rows, img_cols, 4), dtype=np.float32)
-        batch_y = np.empty((length, img_rows, img_cols, 2), dtype=np.float32)
-
-        for i_batch in range(length):
-            name = self.names[i]
-            fcount = int(name.split('.')[0].split('_')[0])
-            bcount = int(name.split('.')[0].split('_')[1])
-            im_name = fg_files[fcount]
-            bg_name = bg_files[bcount]
-            image, alpha, fg, bg = process(im_name, bg_name)
-
-            # crop size 320:640:480 = 1:1:1
-            different_sizes = [(320, 320), (480, 480), (640, 640)]
-            crop_size = random.choice(different_sizes)
-
-            trimap = generate_trimap(alpha)
-            x, y = random_choice(trimap, crop_size)
-            image = safe_crop(image, x, y, crop_size)
-            alpha = safe_crop(alpha, x, y, crop_size)
-            fg = safe_crop(fg, x, y, crop_size)
-            bg = safe_crop(bg, x, y, crop_size)
-
-            trimap = generate_trimap(alpha)
-
-            # Flip array left to right randomly (prob=1:1)
-            if np.random.random_sample() > 0.5:
-                image = np.fliplr(image)
-                trimap = np.fliplr(trimap)
-                alpha = np.fliplr(alpha)
-
-            batch_x[i_batch, :, :, 0:3] = image / 255.
-            batch_x[i_batch, :, :, 3] = trimap / 255.
-
-            mask = np.equal(trimap, 128).astype(np.float32)
-            batch_y[i_batch, :, :, 0] = alpha / 255.
-            batch_y[i_batch, :, :, 1] = mask
-
-            i += 1
-
-        return batch_x, batch_y
-
-    def on_epoch_end(self):
-        np.random.shuffle(self.names)
+        return len(self.names)
 
 
-def train_gen():
-    return DataGenSequence('train')
-
-
-def valid_gen():
-    return DataGenSequence('valid')
-
-
-def shuffle_data():
+def gen_names():
     num_fgs = 431
     num_bgs = 43100
     num_bgs_per_fg = 100
@@ -177,10 +185,8 @@ def shuffle_data():
             names.append(str(fcount) + '_' + str(bcount) + '.png')
             bcount += 1
 
-    valid_names = random.sample(names, num_valid_samples)
+    valid_names = random.sample(names, num_valid)
     train_names = [n for n in names if n not in valid_names]
-    shuffle(valid_names)
-    shuffle(train_names)
 
     with open('valid_names.txt', 'w') as file:
         file.write('\n'.join(valid_names))
@@ -189,8 +195,5 @@ def shuffle_data():
         file.write('\n'.join(train_names))
 
 
-if __name__ == '__main__':
-    filename = 'merged/357_35748.png'
-    bgr_img = cv.imread(filename)
-    bg_h, bg_w = bgr_img.shape[:2]
-    print(bg_w, bg_h)
+if __name__ == "__main__":
+    gen_names()
