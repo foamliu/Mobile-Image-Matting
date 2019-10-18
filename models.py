@@ -84,6 +84,11 @@ class DeepLabV3(nn.Module):
         self.classifier = classifier
         self.aux_classifier = aux_classifier
 
+    def forward(self, x):
+        x = self.backbone(x)
+        x = self.classifier(x)
+        return x
+
 
 if __name__ == "__main__":
     inplanes = 2048
@@ -96,8 +101,11 @@ if __name__ == "__main__":
 
     return_layers = {'layer4': 'out'}
     backbone = IntermediateLayerGetter(backbone, return_layers=return_layers)
+    backbone = backbone.to(device)
+    # print(backbone)
+    # summary(backbone, (3, 320, 320))
 
     model = DeepLabV3(backbone, classifier)
     model = model.to(device)
     print(model)
-    summary(model, (4, 320, 320))
+    summary(model, (3, 320, 320))
