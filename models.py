@@ -3,6 +3,7 @@ from torch import nn
 from torch.nn import functional as F
 from torchsummary import summary
 from torchvision.models import resnet
+from torchvision.models._utils import IntermediateLayerGetter
 
 from config import device
 
@@ -85,5 +86,18 @@ class DeepLabV3(nn.Module):
 
 
 if __name__ == "__main__":
-    model = DeepLabV3(backbone=resnet.resnet101(), classifier=None).to(device)
+    inplanes = 2048
+    num_classes = 256
+    classifier = DeepLabHead(in_channels=inplanes, num_classes=num_classes)
+    backbone_name = 'resnet101'
+    backbone = resnet.__dict__[backbone_name](
+        pretrained=True,
+        replace_stride_with_dilation=[False, True, True])
+
+    return_layers = {'layer4': 'out'}
+    backbone = IntermediateLayerGetter(backbone, return_layers=return_layers)
+
+    model = DeepLabV3(backbone, classifier)
+    model = model.to(device)
     print(model)
+    summary(model, (4, 320, 320))
