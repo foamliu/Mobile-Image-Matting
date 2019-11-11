@@ -7,8 +7,6 @@ from torchvision.models._utils import IntermediateLayerGetter
 
 from config import device
 
-deeplabv3_resnet101_coco = 'https://download.pytorch.org/models/deeplabv3_resnet101_coco-586e9e4e.pth'
-
 
 class DeepLabHead(nn.Sequential):
     def __init__(self, in_channels, num_classes):
