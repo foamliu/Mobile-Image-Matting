@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .aspp import build_aspp
-from .backbone import build_backbone
-from .decoder import build_decoder
-from .sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
+from models.aspp import build_aspp
+from models.backbone import build_backbone
+from models.decoder import build_decoder
+from models.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
 
 
 class DeepLab(nn.Module):

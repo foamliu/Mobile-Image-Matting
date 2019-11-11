@@ -5,7 +5,7 @@ from torch import nn
 
 from config import device, im_size, grad_clip, print_freq
 from data_gen import DIMDataset
-from models.models import DIMModel
+from models import deeplab
 from utils import parse_args, save_checkpoint, AverageMeter, clip_gradient, get_logger, get_learning_rate, \
     alpha_prediction_loss, adjust_learning_rate
 
@@ -21,7 +21,7 @@ def train_net(args):
 
     # Initialize / load checkpoint
     if checkpoint is None:
-        model = DIMModel()
+        model = deeplab()
         model = nn.DataParallel(model)
 
         if args.optimizer == 'sgd':
