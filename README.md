@@ -1,12 +1,11 @@
 # Deep Mobile Matting
-Deep Image Matting [paper](https://arxiv.org/abs/1703.03872) implementation in PyTorch.
+This is a lightweight image matting model in PyTorch.
 
-## Differences
+## Features
 
-1. "fc6" is dropped.
-2. Indices pooling.
+1. MobileNetV2 as backbone.
+2. DeepLabv3 heads.
 
-<p>"fc6" is clumpy, over 100 millions parameters, makes the model hard to converge. I guess it is the reason why the model (paper) has to be trained stagewisely.
 
 ## Performance
 - The Composition-1k testing dataset.
