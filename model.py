@@ -9,4 +9,4 @@ if __name__ == "__main__":
     input = torch.rand(1, 4, 320, 320)
     output = model(input)
     print(output.size())
-    scope(model, (1, 4, 320, 320))
+    scope(model, (4, 320, 320))
