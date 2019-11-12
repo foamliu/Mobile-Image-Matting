@@ -27,5 +27,4 @@ if __name__ == '__main__':
 
     scripted_model_file = 'deep_mobile_matting_scripted.pt'
     # Fuses modules
-    model.fuse_model()
     torch.jit.save(torch.jit.script(model), scripted_model_file)
