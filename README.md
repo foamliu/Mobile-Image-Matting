@@ -5,7 +5,7 @@ This is a lightweight image matting model in PyTorch.
 
 1. MobileNetV2 as backbone.
 2. DeepLabv3 heads.
-
+3. Small model (size: 23.5MB, FLOPs: 11.39GB, total params: 7.62 millions)
 
 ## Performance
 - The Composition-1k testing dataset.
@@ -19,7 +19,7 @@ This is a lightweight image matting model in PyTorch.
 |paper-stage0|59.6|0.019||
 |paper-stage1|54.6|0.017||
 |paper-stage3|50.4|0.014||
-|my-stage0|66.8|0.024|[Link](https://github.com/foamliu/Deep-Image-Matting-v2/releases/download/v1.0/BEST_checkpoint.tar)|
+|my-stage0|TBD|TBD|[Link](https://github.com/foamliu/Deep-Image-Matting-v2/releases/download/v1.0/BEST_checkpoint.tar)|
 
 ## Dependencies
 
