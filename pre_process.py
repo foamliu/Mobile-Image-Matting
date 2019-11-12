@@ -2,11 +2,8 @@
 
 import os
 import shutil
-import zipfile
 import tarfile
-
-from Combined_Dataset.Training_set.Composition_code_revised import do_composite
-from Combined_Dataset.Test_set.Composition_code_revised import do_composite_test
+import zipfile
 
 if __name__ == '__main__':
     # path to provided foreground images

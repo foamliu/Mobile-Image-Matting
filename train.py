@@ -2,12 +2,13 @@ import numpy as np
 import torch
 from tensorboardX import SummaryWriter
 from torch import nn
+from torch.optim.lr_scheduler import MultiStepLR
 
 from config import device, im_size, grad_clip, print_freq
 from data_gen import DIMDataset
 from models.deeplab import DeepLab
 from utils import parse_args, save_checkpoint, AverageMeter, clip_gradient, get_logger, get_learning_rate, \
-    alpha_prediction_loss, adjust_learning_rate
+    alpha_prediction_loss
 
 
 def train_net(args):
@@ -48,18 +49,11 @@ def train_net(args):
     valid_dataset = DIMDataset('valid')
     valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8)
 
+    scheduler = MultiStepLR(optimizer, milestones=[10, 20], gamma=0.1)
+
     # Epochs
     for epoch in range(start_epoch, args.end_epoch):
-        if epochs_since_improvement == 10:
-            break
-
-        if epochs_since_improvement > 0 and epochs_since_improvement % 2 == 0:
-            checkpoint = 'BEST_checkpoint.tar'
-            checkpoint = torch.load(checkpoint)
-            model = checkpoint['model']
-            optimizer = checkpoint['optimizer']
-
-            adjust_learning_rate(optimizer, 0.6)
+        scheduler.step(epoch)
 
         # One epoch's training
         train_loss = train(train_loader=train_loader,
