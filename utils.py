@@ -92,7 +92,7 @@ def parse_args():
     parser.add_argument('--mom', type=float, default=0.9, help='momentum')
     parser.add_argument('--batch-size', type=int, default=32, help='batch size in each context')
     parser.add_argument('--checkpoint', type=str, default=None, help='checkpoint')
-    parser.add_argument('--pretrained', type=bool, default=True, help='pretrained model')
+    parser.add_argument('--pretrained', type=bool, default=False, help='pretrained model')
     args = parser.parse_args()
     return args
 

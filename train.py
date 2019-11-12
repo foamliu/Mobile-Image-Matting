@@ -23,6 +23,10 @@ def train_net(args):
     # Initialize / load checkpoint
     if checkpoint is None:
         model = DeepLab(backbone='mobilenet', output_stride=16, num_classes=1)
+
+        if args.pretrained:
+            model.load_state_dict(torch.load('deep_mobile_matting.pt'))
+
         model = nn.DataParallel(model)
 
         if args.optimizer == 'sgd':
