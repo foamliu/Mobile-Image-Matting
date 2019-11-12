@@ -19,7 +19,7 @@ This is a lightweight image matting model in PyTorch.
 |paper-stage0|59.6|0.019||
 |paper-stage1|54.6|0.017||
 |paper-stage3|50.4|0.014||
-|my-stage0|TBD|TBD|[Link](https://github.com/foamliu/Deep-Image-Matting-v2/releases/download/v1.0/BEST_checkpoint.tar)|
+|my-stage0|141.1|0.084|[Link](https://github.com/foamliu/Deep-Image-Matting-v2/releases/download/v1.0/BEST_checkpoint.tar)|
 
 ## Dependencies
 
