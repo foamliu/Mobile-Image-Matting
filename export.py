@@ -2,7 +2,7 @@ import time
 
 import torch
 
-# from models.deeplab import DeepLab
+from models.deeplab import DeepLab
 
 if __name__ == '__main__':
     checkpoint = 'BEST_checkpoint.tar'
@@ -19,11 +19,11 @@ if __name__ == '__main__':
     torch.save(model.state_dict(), filename)
     print('elapsed {} sec'.format(time.time() - start))
 
-    # print('loading {}...'.format(filename))
-    # start = time.time()
-    # model = DeepLab(backbone='mobilenet', output_stride=16, num_classes=1)
-    # model.load_state_dict(torch.load(filename))
-    # print('elapsed {} sec'.format(time.time() - start))
+    print('loading {}...'.format(filename))
+    start = time.time()
+    model = DeepLab(backbone='mobilenet', output_stride=16, num_classes=1)
+    model.load_state_dict(torch.load(filename))
+    print('elapsed {} sec'.format(time.time() - start))
 
-    scripted_model_file = 'deep_mobile_matting_scripted.pt'
-    torch.jit.save(torch.jit.script(model), scripted_model_file)
+    # scripted_model_file = 'deep_mobile_matting_scripted.pt'
+    # torch.jit.save(torch.jit.script(model), scripted_model_file)
