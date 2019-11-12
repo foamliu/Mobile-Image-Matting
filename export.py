@@ -26,5 +26,4 @@ if __name__ == '__main__':
     # print('elapsed {} sec'.format(time.time() - start))
 
     scripted_model_file = 'deep_mobile_matting_scripted.pt'
-    # Fuses modules
     torch.jit.save(torch.jit.script(model), scripted_model_file)
