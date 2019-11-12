@@ -21,7 +21,7 @@ def train_net(args):
 
     # Initialize / load checkpoint
     if checkpoint is None:
-        model = DeepLab(backbone='mobilenet', output_stride=16, num_classes=256)
+        model = DeepLab(backbone='mobilenet', output_stride=16, num_classes=1)
         model = nn.DataParallel(model)
 
         if args.optimizer == 'sgd':

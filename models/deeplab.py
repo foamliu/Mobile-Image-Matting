@@ -22,6 +22,7 @@ class DeepLab(nn.Module):
         self.backbone = build_backbone(backbone, output_stride, BatchNorm)
         self.aspp = build_aspp(backbone, output_stride, BatchNorm)
         self.decoder = build_decoder(num_classes, backbone, BatchNorm)
+        self.sigmoid = nn.Sigmoid()
 
         if freeze_bn:
             self.freeze_bn()
@@ -31,6 +32,8 @@ class DeepLab(nn.Module):
         x = self.aspp(x)
         x = self.decoder(x, low_level_feat)
         x = F.interpolate(x, size=input.size()[2:], mode='bilinear', align_corners=True)
+        x = torch.squeeze(x, dim=1)  # [N, 1, 320, 320] -> [N, 320, 320]
+        x = self.sigmoid(x)
 
         return x
 
