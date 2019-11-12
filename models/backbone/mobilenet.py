@@ -87,7 +87,7 @@ class MobileNetV2(nn.Module):
 
         # building first layer
         input_channel = int(input_channel * width_mult)
-        self.features = [conv_bn(3, input_channel, 2, BatchNorm)]
+        self.features = [conv_bn(4, input_channel, 2, BatchNorm)]
         current_stride *= 2
         # building inverted residual blocks
         for t, c, n, s in interverted_residual_setting:
