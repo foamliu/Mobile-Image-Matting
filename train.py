@@ -2,7 +2,6 @@ import numpy as np
 import torch
 from tensorboardX import SummaryWriter
 from torch import nn
-from torch.optim.lr_scheduler import MultiStepLR
 
 from config import device, im_size, grad_clip, print_freq
 from data_gen import DIMDataset
@@ -52,11 +51,11 @@ def train_net(args):
     valid_dataset = DIMDataset('valid')
     valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8)
 
-    scheduler = MultiStepLR(optimizer, milestones=[10, 20], gamma=0.1)
+    # scheduler = MultiStepLR(optimizer, milestones=[10, 20], gamma=0.1)
 
     # Epochs
     for epoch in range(start_epoch, args.end_epoch):
-        scheduler.step(epoch)
+        # scheduler.step(epoch)
 
         # One epoch's training
         train_loss = train(train_loader=train_loader,
