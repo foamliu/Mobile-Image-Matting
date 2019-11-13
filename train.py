@@ -30,10 +30,9 @@ def train_net(args):
         model = nn.DataParallel(model)
 
         if args.optimizer == 'sgd':
-            optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.mom,
-                                        weight_decay=args.weight_decay)
+            optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.mom, nesterov=True)
         else:
-            optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+            optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     else:
         checkpoint = torch.load(checkpoint)
