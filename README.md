@@ -45,6 +45,7 @@ Go to [PASCAL VOC](http://host.robots.ox.ac.uk/pascal/VOC/) to download:
 Extract training images:
 ```bash
 $ python pre_process.py
+# python data_gen.py
 ```
 
 ### Train
