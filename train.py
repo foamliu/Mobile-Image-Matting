@@ -3,7 +3,7 @@ import torch
 from torch import nn
 from torch.utils.tensorboard import SummaryWriter
 
-from config import device, im_size, grad_clip, print_freq
+from config import device, im_size, grad_clip, print_freq, num_workers
 from data_gen import DIMDataset
 from models.deeplab import DeepLab
 from utils import parse_args, save_checkpoint, AverageMeter, clip_gradient, get_logger, get_learning_rate, \
@@ -40,9 +40,11 @@ def train_net(args):
 
     # Custom dataloaders
     train_dataset = DIMDataset('train')
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
+                                               num_workers=num_workers)
     valid_dataset = DIMDataset('valid')
-    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8)
+    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False,
+                                               num_workers=num_workers)
 
     # scheduler = MultiStepLR(optimizer, milestones=[10, 20], gamma=0.1)
 
