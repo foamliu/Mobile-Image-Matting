@@ -94,11 +94,11 @@ def train(train_loader, model, optimizer, epoch, logger):
     for i, (img, alpha_label) in enumerate(train_loader):
         # Move to GPU, if available
         img = img.type(torch.FloatTensor).to(device)  # [N, 4, 320, 320]
-        alpha_label = alpha_label.type(torch.FloatTensor).to(device)  # [N, 320, 320]
-        alpha_label = alpha_label.reshape((-1, 2, im_size * im_size))  # [N, 320*320]
+        alpha_label = alpha_label.type(torch.FloatTensor).to(device)  # [N, 2, 320, 320]
+        alpha_label = alpha_label.reshape((-1, 2, im_size * im_size))  # [N, 2, 320*320]
 
         # Forward prop.
-        alpha_out = model(img)  # [N, 3, 320, 320]
+        alpha_out = model(img)  # [N, 320, 320]
         alpha_out = alpha_out.reshape((-1, 1, im_size * im_size))  # [N, 320*320]
 
         # Calculate loss
@@ -136,7 +136,7 @@ def valid(valid_loader, model, logger):
     # Batches
     for img, alpha_label in valid_loader:
         # Move to GPU, if available
-        img = img.type(torch.FloatTensor).to(device)  # [N, 3, 320, 320]
+        img = img.type(torch.FloatTensor).to(device)  # [N, 4, 320, 320]
         alpha_label = alpha_label.type(torch.FloatTensor).to(device)  # [N, 2, 320, 320]
         alpha_label = alpha_label.reshape((-1, 2, im_size * im_size))  # [N, 2, 320*320]
 
