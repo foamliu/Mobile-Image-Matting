@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
 
 from config import device, im_size, grad_clip, print_freq, num_workers
 from data_gen import DIMDataset
@@ -133,7 +134,7 @@ def valid(valid_loader, model, logger):
     losses = AverageMeter()
 
     # Batches
-    for img, alpha_label in valid_loader:
+    for img, alpha_label in tqdm(valid_loader):
         # Move to GPU, if available
         img = img.type(torch.FloatTensor).to(device)  # [N, 4, 320, 320]
         alpha_label = alpha_label.type(torch.FloatTensor).to(device)  # [N, 2, 320, 320]
