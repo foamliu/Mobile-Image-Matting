@@ -7,6 +7,7 @@ from tqdm import tqdm
 from config import device, im_size, grad_clip, print_freq, num_workers
 from data_gen import DIMDataset
 from models.deeplab import DeepLab
+from test import test
 from utils import parse_args, save_checkpoint, AverageMeter, clip_gradient, get_logger, get_learning_rate, \
     alpha_prediction_loss
 
@@ -63,18 +64,27 @@ def train_net(args):
         effective_lr = get_learning_rate(optimizer)
         print('Current effective learning rate: {}\n'.format(effective_lr))
 
-        writer.add_scalar('Train_Loss', train_loss, epoch)
+        writer.add_scalar('model/train_loss', train_loss, epoch)
 
         # One epoch's validation
-        valid_loss = valid(valid_loader=valid_loader,
-                           model=model,
-                           logger=logger)
+        # valid_loss = valid(valid_loader=valid_loader,
+        #                    model=model,
+        #                    logger=logger)
+        #
+        # writer.add_scalar('Valid_Loss', valid_loss, epoch)
 
-        writer.add_scalar('Valid_Loss', valid_loss, epoch)
+        # One epoch's test
+        sad_loss, mse_loss = test(model)
+        writer.add_scalar('model/sad_loss', sad_loss, epoch)
+        writer.add_scalar('model/mse_loss', mse_loss, epoch)
+
+        # Print status
+        status = 'Test: SAD {:.4f} MSE {:.4f}\n'.format(sad_loss, mse_loss)
+        logger.info(status)
 
         # Check if there was an improvement
-        is_best = valid_loss < best_loss
-        best_loss = min(valid_loss, best_loss)
+        is_best = mse_loss < best_loss
+        best_loss = min(mse_loss, best_loss)
         if not is_best:
             epochs_since_improvement += 1
             print("\nEpochs since last improvement: %d\n" % (epochs_since_improvement,))
@@ -153,7 +163,6 @@ def valid(valid_loader, model, logger):
 
     # Print status
     status = 'Validation: Loss {loss.avg:.4f}\n'.format(loss=losses)
-
     logger.info(status)
 
     return losses.avg
