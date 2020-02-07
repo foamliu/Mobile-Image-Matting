@@ -42,23 +42,6 @@ def process_test(im_name, bg_name, trimap, trimap_name):
     return composite4_test(im, bg, a, w, h, trimap, trimap_name)
 
 
-# def composite4_test(fg, bg, a, w, h):
-#     fg = np.array(fg, np.float32)
-#     bg_h, bg_w = bg.shape[:2]
-#     x = max(0, int((bg_w - w)/2))
-#     y = max(0, int((bg_h - h)/2))
-#     bg = np.array(bg[y:y + h, x:x + w], np.float32)
-#     alpha = np.zeros((h, w, 1), np.float32)
-#     alpha[:, :, 0] = a / 255.
-#     im = alpha * fg + (1 - alpha) * bg
-#     im = im.astype(np.uint8)
-#     print('im.shape: ' + str(im.shape))
-#     print('a.shape: ' + str(a.shape))
-#     print('fg.shape: ' + str(fg.shape))
-#     print('bg.shape: ' + str(bg.shape))
-#     return im, a, fg, bg
-
-
 def composite4_test(fg, bg, a, w, h, trimap, trimap_name):
     fg = np.array(fg, np.float32)
     bg_h, bg_w = bg.shape[:2]
@@ -67,8 +50,6 @@ def composite4_test(fg, bg, a, w, h, trimap, trimap_name):
     crop = np.array(bg[y:y + h, x:x + w], np.float32)
     alpha = np.zeros((h, w, 1), np.float32)
     alpha[:, :, 0] = a / 255.
-    # trimaps = np.zeros((h, w, 1), np.float32)
-    # trimaps[:,:,0]=trimap/255.
 
     im = alpha * fg + (1 - alpha) * crop
     im = im.astype(np.uint8)
@@ -80,11 +61,14 @@ def composite4_test(fg, bg, a, w, h, trimap, trimap_name):
     cv.imwrite('images/test/new/' + trimap_name, new_trimap)
     new_im = bg.copy()
     new_im[y:y + h, x:x + w] = im
-    # cv.imwrite('images/test/new_im/'+trimap_name,new_im)
     return new_im, new_a, fg, bg, new_trimap
 
 
 def test(model):
+    transformer = data_transforms['valid']
+
+    names = gen_test_names()
+
     mse_losses = AverageMeter()
     sad_losses = AverageMeter()
 
@@ -93,13 +77,10 @@ def test(model):
         fcount = int(name.split('.')[0].split('_')[0])
         bcount = int(name.split('.')[0].split('_')[1])
         im_name = fg_test_files[fcount]
-        # print(im_name)
         bg_name = bg_test_files[bcount]
         trimap_name = im_name.split('.')[0] + '_' + str(i) + '.png'
-        # print('trimap_name: ' + str(trimap_name))
 
         trimap = cv.imread('data/Combined_Dataset/Test_set/Adobe-licensed images/trimaps/' + trimap_name, 0)
-        # print('trimap: ' + str(trimap))
 
         i += 1
         if i == 20:
@@ -107,8 +88,6 @@ def test(model):
 
         img, alpha, fg, bg, new_trimap = process_test(im_name, bg_name, trimap, trimap_name)
         h, w = img.shape[:2]
-        # mytrimap = gen_trimap(alpha)
-        # cv.imwrite('images/test/new_im/'+trimap_name,mytrimap)
 
         x = torch.zeros((1, 4, h, w), dtype=torch.float)
         img = img[..., ::-1]  # RGB
@@ -132,15 +111,12 @@ def test(model):
         cv.imwrite('images/test/out/' + trimap_name, pred * 255)
 
         # Calculate loss
-        # loss = criterion(alpha_out, alpha_label)
         mse_loss = compute_mse(pred, alpha, trimap)
         sad_loss = compute_sad(pred, alpha)
 
         # Keep track of metrics
         mse_losses.update(mse_loss.item())
         sad_losses.update(sad_loss.item())
-        # print("sad:{} mse:{}".format(sad_loss.item(), mse_loss.item()))
-        # print("sad:{} mse:{}".format(sad_losses.avg, mse_losses.avg))
 
     return sad_losses.avg, mse_losses.avg
 
@@ -151,10 +127,6 @@ if __name__ == '__main__':
     model = checkpoint['model'].module
     model = model.to(device)
     model.eval()
-
-    transformer = data_transforms['valid']
-
-    names = gen_test_names()
 
     sad_loss, mse_loss = test(model)
 
