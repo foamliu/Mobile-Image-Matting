@@ -65,6 +65,8 @@ def composite4_test(fg, bg, a, w, h, trimap, trimap_name):
 
 
 def test(model):
+    model.eval()
+
     transformer = data_transforms['valid']
 
     names = gen_test_names()
@@ -126,7 +128,6 @@ if __name__ == '__main__':
     checkpoint = torch.load(checkpoint)
     model = checkpoint['model'].module
     model = model.to(device)
-    model.eval()
 
     sad_loss, mse_loss = test(model)
 
