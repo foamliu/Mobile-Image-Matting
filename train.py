@@ -45,9 +45,9 @@ def train_net(args):
     train_dataset = DIMDataset('train')
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
                                                num_workers=num_workers)
-    valid_dataset = DIMDataset('valid')
-    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False,
-                                               num_workers=num_workers)
+    # valid_dataset = DIMDataset('valid')
+    # valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False,
+    #                                            num_workers=num_workers)
 
     # scheduler = MultiStepLR(optimizer, milestones=[10, 20], gamma=0.1)
 
