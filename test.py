@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from config import device, fg_path_test, a_path_test, bg_path_test
 from data_gen import data_transforms, fg_test_files, bg_test_files
-from utils import compute_mse, compute_sad, AverageMeter, get_logger
+from utils import compute_mse, compute_sad, AverageMeter
 
 
 def gen_test_names():
@@ -26,7 +26,7 @@ def gen_test_names():
     return names
 
 
-def process_test(im_name, bg_name, trimap):
+def process_test(im_name, bg_name, trimap, trimap_name):
     # print(bg_path_test + bg_name)
     im = cv.imread(fg_path_test + im_name)
     a = cv.imread(a_path_test + im_name, 0)
@@ -39,7 +39,7 @@ def process_test(im_name, bg_name, trimap):
     if ratio > 1:
         bg = cv.resize(src=bg, dsize=(math.ceil(bw * ratio), math.ceil(bh * ratio)), interpolation=cv.INTER_CUBIC)
 
-    return composite4_test(im, bg, a, w, h, trimap)
+    return composite4_test(im, bg, a, w, h, trimap, trimap_name)
 
 
 # def composite4_test(fg, bg, a, w, h):
@@ -59,7 +59,7 @@ def process_test(im_name, bg_name, trimap):
 #     return im, a, fg, bg
 
 
-def composite4_test(fg, bg, a, w, h, trimap):
+def composite4_test(fg, bg, a, w, h, trimap, trimap_name):
     fg = np.array(fg, np.float32)
     bg_h, bg_w = bg.shape[:2]
     x = max(0, int((bg_w - w) / 2))
@@ -84,21 +84,10 @@ def composite4_test(fg, bg, a, w, h, trimap):
     return new_im, new_a, fg, bg, new_trimap
 
 
-if __name__ == '__main__':
-    checkpoint = 'BEST_checkpoint.tar'
-    checkpoint = torch.load(checkpoint)
-    model = checkpoint['model'].module
-    model = model.to(device)
-    model.eval()
-
-    transformer = data_transforms['valid']
-
-    names = gen_test_names()
-
+def test(model):
     mse_losses = AverageMeter()
     sad_losses = AverageMeter()
 
-    logger = get_logger()
     i = 0
     for name in tqdm(names):
         fcount = int(name.split('.')[0].split('_')[0])
@@ -116,7 +105,7 @@ if __name__ == '__main__':
         if i == 20:
             i = 0
 
-        img, alpha, fg, bg, new_trimap = process_test(im_name, bg_name, trimap)
+        img, alpha, fg, bg, new_trimap = process_test(im_name, bg_name, trimap, trimap_name)
         h, w = img.shape[:2]
         # mytrimap = gen_trimap(alpha)
         # cv.imwrite('images/test/new_im/'+trimap_name,mytrimap)
@@ -153,4 +142,20 @@ if __name__ == '__main__':
         # print("sad:{} mse:{}".format(sad_loss.item(), mse_loss.item()))
         # print("sad:{} mse:{}".format(sad_losses.avg, mse_losses.avg))
 
-    print("final sad:{} mse:{}".format(sad_losses.avg, mse_losses.avg))
+    return sad_losses.avg, mse_losses.avg
+
+
+if __name__ == '__main__':
+    checkpoint = 'BEST_checkpoint.tar'
+    checkpoint = torch.load(checkpoint)
+    model = checkpoint['model'].module
+    model = model.to(device)
+    model.eval()
+
+    transformer = data_transforms['valid']
+
+    names = gen_test_names()
+
+    sad_loss, mse_loss = test(model)
+
+    print("final sad:{} mse:{}".format(sad_loss, mse_loss))
